@@ -1,3 +1,9 @@
+# choosing the base image as the build stage:
+FROM node:16-alpine AS build
+
+# choosing working directory for the application:
+WORKDIR /app
+
 # copying the package.json files and installing dependencies:
 COPY package*.json ./
 RUN npm install
@@ -22,4 +28,4 @@ COPY --from=build /app/build /usr/share/nginx/html
 EXPOSE 80
 
 # starting nginx:
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["nginx", "-g", "daemon off;"] 
