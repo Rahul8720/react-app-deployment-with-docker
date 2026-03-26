@@ -2,13 +2,13 @@
 
 echo "$DOCKER_PASS" | docker login -u "$DOCKER_USERNAME" --password-stdin
 
-docker stop deploy-project || true
-docker rm deploy-project || true
+docker stop react-container || true
+docker rm react-container || true
 
-docker build -t react-project .
+docker build -t react-app .
 
-docker run -d --name deploy-project -p 555:80 react-project
+docker run -d --name react-container -p 555:80 reac-app
 
-docker tag react-project rahul9786/react-project-1:latest
+docker tag react-app rahul9786/react-app-1:latest
 
-docker push rahul9786/react-project-1:latest
+docker push rahul9786/react-app-1:latest
