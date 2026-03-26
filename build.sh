@@ -7,7 +7,7 @@ docker rm react-container || true
 
 docker build -t react-app .
 
-docker run -d --name react-container -p 555:80 reac-app
+docker run -d --name react-container -p 555:80 react-app
 
 docker tag react-app rahul9786/react-app-1:latest
 
