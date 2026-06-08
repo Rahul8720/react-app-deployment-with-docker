@@ -2,9 +2,12 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "reactapp"
-        CONTAINER_NAME = "reactapp"
-        DOCKERHub_IMAGE = "rahul8720/reactapp"
+        AWS_REGION = "ap-southeast-2"
+        ECR_REPO = "react-app-repo"
+        ECR_URI = "864482618084.dkr.ecr.ap-southeast-2.amazonaws.com/react-app-repo"
+        IMAGE_TAG = "latest"
+        ECS_CLUSTER = "react-app"
+        ECS_SERVICE = "Task_execution_role-service-fs3oqdor"
     }
 
     stages {
@@ -18,51 +21,39 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $IMAGE_NAME .'
+                sh 'docker build -t $ECR_REPO:$IMAGE_TAG .'
             }
         }
 
-        stage('Tag Docker Image') {
+        stage('Tag Image') {
             steps {
-                sh 'docker tag $IMAGE_NAME $DOCKERHub_IMAGE:latest'
+                sh 'docker tag $ECR_REPO:$IMAGE_TAG $ECR_URI:$IMAGE_TAG'
             }
         }
 
-        stage('Docker Login') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                }
-            }
-        }
-
-        stage('Push Image to DockerHub') {
-            steps {
-                sh 'docker push $DOCKERHub_IMAGE:latest'
-            }
-        }
-
-        stage('Stop Old Container') {
+        stage('Login to ECR') {
             steps {
                 sh '''
-                docker stop $CONTAINER_NAME || true
-                docker rm $CONTAINER_NAME || true
+                aws ecr get-login-password --region $AWS_REGION | \
+                docker login --username AWS --password-stdin $ECR_URI
                 '''
             }
         }
 
-        stage('Run New Container') {
+        stage('Push to ECR') {
+            steps {
+                sh 'docker push $ECR_URI:$IMAGE_TAG'
+            }
+        }
+
+        stage('Deploy to ECS') {
             steps {
                 sh '''
-                docker run -d \
-                -p 80:3000 \
-                --name $CONTAINER_NAME \
-                $DOCKERHub_IMAGE:latest
+                aws ecs update-service \
+                    --cluster $ECS_CLUSTER \
+                    --service $ECS_SERVICE \
+                    --force-new-deployment \
+                    --region $AWS_REGION
                 '''
             }
         }
@@ -70,11 +61,10 @@ pipeline {
 
     post {
         success {
-            echo 'React App Deployed Successfully!'
+            echo '🚀 ECS Deployment Successful'
         }
-
         failure {
-            echo 'Deployment Failed!'
+            echo '❌ Deployment Failed'
         }
     }
 }
